@@ -7790,200 +7790,204 @@
     </svg>
 </div>
 
+
+
 <script>
-    const container = document.getElementById('container');
-    const svg = document.getElementById('svg');
-    const inner = document.getElementById('inner');
+const container = document.getElementById('container');
+const svg = document.getElementById('svg');
+const inner = document.getElementById('inner');
 
-    const viewBox = svg.viewBox.baseVal;
-    const svgWidth = viewBox.width;
-    const svgHeight = viewBox.height;
+const viewBox = svg.viewBox.baseVal;
+const svgWidth = viewBox.width;
+const svgHeight = viewBox.height;
 
-    let scale = 1;
-    let translate = { x: 0, y: 0 };
-    let isDragging = false;
-    let start = { x: 0, y: 0 };
-    let lastTouchDist = null;
-    let lastTouchMid = null;
+let scale = 1;
+let translate = { x: 0, y: 0 };
+let isDragging = false;
+let start = { x: 0, y: 0 };
+let lastTouchDist = null;
+let lastTouchMid = null;
 
-    function clamp(val, min, max) {
-        return Math.max(min, Math.min(max, val));
+function clamp(val, min, max) {
+    return Math.max(min, Math.min(max, val));
+}
+
+function getMinScale() {
+    return Math.max(
+    container.clientWidth / svgWidth,
+    container.clientHeight / svgHeight
+    );
+}
+
+function setTransition(enabled, mode = 'mouse') {
+    if (!enabled) {
+    inner.style.transition = 'none';
+    } else if (mode === 'touch') {
+    inner.style.transition = 'transform 0.05s linear';
+    } else {
+    inner.style.transition = 'transform 0.2s ease-out';
     }
+}
 
-    function getMinScale() {
-        return Math.max(
-            container.clientWidth / svgWidth,
-            container.clientHeight / svgHeight
-        );
+function updateTransform() {
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+
+    const scaledWidth = svgWidth * scale;
+    const scaledHeight = svgHeight * scale;
+
+    const minX = Math.min(0, containerWidth - scaledWidth);
+    const minY = Math.min(0, containerHeight - scaledHeight);
+
+    const maxX = 0;
+    const maxY = 0;
+
+    translate.x = clamp(translate.x, minX, maxX);
+    translate.y = clamp(translate.y, minY, maxY);
+
+    inner.style.transform = `translate(${translate.x}px, ${translate.y}px) scale(${scale})`;
+}
+
+function centerInitialView() {
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+
+    // Масштабируем по большей оси — чтобы SVG заполнило экран (с обрезкой краёв)
+    scale = Math.max(
+    containerWidth / svgWidth,
+    containerHeight / svgHeight
+    );
+
+    const scaledWidth = svgWidth * scale;
+    const scaledHeight = svgHeight * scale;
+
+    translate.x = (containerWidth - scaledWidth) / 2;
+    translate.y = (containerHeight - scaledHeight) / 2;
+
+    updateTransform();
+}
+
+// Мышь
+svg.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    setTransition(false);
+    start = { x: e.clientX - translate.x, y: e.clientY - translate.y };
+    svg.style.cursor = "grabbing";
+});
+
+window.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    translate = {
+    x: e.clientX - start.x,
+    y: e.clientY - start.y
+    };
+    updateTransform();
+});
+
+window.addEventListener("mouseup", () => {
+    isDragging = false;
+    svg.style.cursor = "grab";
+});
+
+svg.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    setTransition(true, 'mouse');
+
+    const zoomSpeed = 0.0005;
+    const oldScale = scale;
+    scale += -e.deltaY * zoomSpeed;
+
+    // Без верхнего лимита
+    scale = Math.max(scale, getMinScale());
+
+    const rect = svg.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const dx = mouseX - translate.x;
+    const dy = mouseY - translate.y;
+
+    translate.x -= dx * (scale / oldScale - 1);
+    translate.y -= dy * (scale / oldScale - 1);
+
+    updateTransform();
+});
+
+// Тач
+svg.addEventListener("touchstart", (e) => {
+    setTransition(true, 'touch');
+
+    if (e.touches.length === 1) {
+    isDragging = true;
+    const touch = e.touches[0];
+    start = { x: touch.clientX - translate.x, y: touch.clientY - translate.y };
+    } else if (e.touches.length === 2) {
+    lastTouchDist = getDistance(e.touches[0], e.touches[1]);
+    lastTouchMid = getMidpoint(e.touches[0], e.touches[1]);
     }
+});
 
-    function setTransition(enabled, mode = 'mouse') {
-        if (!enabled) {
-            inner.style.transition = 'none';
-        } else if (mode === 'touch') {
-            inner.style.transition = 'transform 0.05s linear';
-        } else {
-            inner.style.transition = 'transform 0.2s ease-out';
-        }
-    }
+svg.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    setTransition(true, 'touch');
 
-    function updateTransform() {
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
+    if (e.touches.length === 1 && isDragging) {
+    const touch = e.touches[0];
+    translate = {
+        x: touch.clientX - start.x,
+        y: touch.clientY - start.y
+    };
+    updateTransform();
+    } else if (e.touches.length === 2) {
+    const dist = getDistance(e.touches[0], e.touches[1]);
+    const mid = getMidpoint(e.touches[0], e.touches[1]);
 
-        const scaledWidth = svgWidth * scale;
-        const scaledHeight = svgHeight * scale;
-
-        const minX = Math.min(0, containerWidth - scaledWidth);
-        const minY = Math.min(0, containerHeight - scaledHeight);
-
-        const maxX = 0;
-        const maxY = 0;
-
-        translate.x = clamp(translate.x, minX, maxX);
-        translate.y = clamp(translate.y, minY, maxY);
-
-        inner.style.transform = `translate(${translate.x}px, ${translate.y}px) scale(${scale})`;
-    }
-
-    function centerInitialView() {
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-
-        // Масштабируем по большей оси — заполняем экран с возможной обрезкой
-        scale = Math.max(
-            containerWidth / svgWidth,
-            containerHeight / svgHeight
-        );
-
-        const scaledWidth = svgWidth * scale;
-        const scaledHeight = svgHeight * scale;
-
-        translate.x = (containerWidth - scaledWidth) / 2;
-        translate.y = (containerHeight - scaledHeight) / 2;
-
-        updateTransform();
-    }
-
-    // 🖱 Мышь
-    svg.addEventListener("mousedown", (e) => {
-        isDragging = true;
-        setTransition(false);
-        start = { x: e.clientX - translate.x, y: e.clientY - translate.y };
-        svg.style.cursor = "grabbing";
-    });
-
-    window.addEventListener("mousemove", (e) => {
-        if (!isDragging) return;
-        translate = {
-            x: e.clientX - start.x,
-            y: e.clientY - start.y
-        };
-        updateTransform();
-    });
-
-    window.addEventListener("mouseup", () => {
-        isDragging = false;
-        svg.style.cursor = "grab";
-    });
-
-    svg.addEventListener("wheel", (e) => {
-        e.preventDefault();
-        setTransition(true, 'mouse');
-
-        const zoomSpeed = 0.0005;
+    if (lastTouchDist && lastTouchMid) {
         const oldScale = scale;
-        scale += -e.deltaY * zoomSpeed;
+        const scaleFactor = dist / lastTouchDist;
+        scale *= scaleFactor;
 
-        scale = clamp(scale, getMinScale(), 4);
+        // Без верхнего лимита
+        scale = Math.max(scale, getMinScale());
 
-        const rect = svg.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        const dx = mouseX - translate.x;
-        const dy = mouseY - translate.y;
+        const dx = mid.x - translate.x;
+        const dy = mid.y - translate.y;
 
         translate.x -= dx * (scale / oldScale - 1);
         translate.y -= dy * (scale / oldScale - 1);
 
         updateTransform();
-    });
-
-    // 📱 Тач
-    svg.addEventListener("touchstart", (e) => {
-        setTransition(true, 'touch');
-
-        if (e.touches.length === 1) {
-            isDragging = true;
-            const touch = e.touches[0];
-            start = { x: touch.clientX - translate.x, y: touch.clientY - translate.y };
-        } else if (e.touches.length === 2) {
-            lastTouchDist = getDistance(e.touches[0], e.touches[1]);
-            lastTouchMid = getMidpoint(e.touches[0], e.touches[1]);
-        }
-    });
-
-    svg.addEventListener("touchmove", (e) => {
-        e.preventDefault();
-        setTransition(true, 'touch');
-
-        if (e.touches.length === 1 && isDragging) {
-            const touch = e.touches[0];
-            translate = {
-                x: touch.clientX - start.x,
-                y: touch.clientY - start.y
-            };
-            updateTransform();
-        } else if (e.touches.length === 2) {
-            const dist = getDistance(e.touches[0], e.touches[1]);
-            const mid = getMidpoint(e.touches[0], e.touches[1]);
-
-            if (lastTouchDist && lastTouchMid) {
-                const oldScale = scale;
-                const scaleFactor = dist / lastTouchDist;
-                scale *= scaleFactor;
-
-                scale = clamp(scale, getMinScale(), 4);
-
-                const dx = mid.x - translate.x;
-                const dy = mid.y - translate.y;
-
-                translate.x -= dx * (scale / oldScale - 1);
-                translate.y -= dy * (scale / oldScale - 1);
-
-                updateTransform();
-            }
-
-            lastTouchDist = dist;
-            lastTouchMid = mid;
-        }
-    });
-
-    svg.addEventListener("touchend", (e) => {
-        if (e.touches.length < 2) {
-            lastTouchDist = null;
-            lastTouchMid = null;
-        }
-        if (e.touches.length === 0) {
-            isDragging = false;
-        }
-    });
-
-    function getDistance(p1, p2) {
-        const dx = p2.clientX - p1.clientX;
-        const dy = p2.clientY - p1.clientY;
-        return Math.hypot(dx, dy);
     }
 
-    function getMidpoint(p1, p2) {
-        return {
-            x: (p1.clientX + p2.clientX) / 2,
-            y: (p1.clientY + p2.clientY) / 2
-        };
+    lastTouchDist = dist;
+    lastTouchMid = mid;
     }
+});
 
-    // 🚀 Инициализация
-    window.addEventListener("resize", centerInitialView);
-    centerInitialView();
+svg.addEventListener("touchend", (e) => {
+    if (e.touches.length < 2) {
+    lastTouchDist = null;
+    lastTouchMid = null;
+    }
+    if (e.touches.length === 0) {
+    isDragging = false;
+    }
+});
+
+function getDistance(p1, p2) {
+    const dx = p2.clientX - p1.clientX;
+    const dy = p2.clientY - p1.clientY;
+    return Math.hypot(dx, dy);
+}
+
+function getMidpoint(p1, p2) {
+    return {
+    x: (p1.clientX + p2.clientX) / 2,
+    y: (p1.clientY + p2.clientY) / 2
+    };
+}
+
+// Инициализация
+window.addEventListener("resize", centerInitialView);
+centerInitialView();
 </script>
