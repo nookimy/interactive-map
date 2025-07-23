@@ -39,10 +39,15 @@ svg {
 .balloon {
    background-color: #fff;
    width: 230px;
+
    position: absolute;
-   z-index: 3000;
-   bottom: 0;
-   left: 0;
+    display: none;
+    background: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    z-index: 1000;
+    min-width: 200px;
 
    &__close-button {
       position: absolute;
