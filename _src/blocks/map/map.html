@@ -1,4 +1,4 @@
-<div id="container">
+<div id="map">
     <svg id="svg" width="3767" height="2334" viewBox="0 0 3767 2334" fill="none" xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink">
         <g id="inner">
@@ -7141,7 +7141,13 @@
             <path id="path58377" opacity="0.6" fill-rule="evenodd" clip-rule="evenodd"
                 d="M2071.05 1834.72L2043.71 1884.68L1984.29 1810.01L1992.71 1803.17L2000.59 1793.18L2071.05 1834.72Z"
                 fill="#23DD00" stroke="black" stroke-width="1.01458" />
-            <path id="path62461" opacity="0.6" fill-rule="evenodd" clip-rule="evenodd"
+            <path 
+            data-locationnumber="3665" 
+            data-locationtype="location"
+            data-locationname="Свободный участок" data-locationarea="1669"
+            data-locationprice="8 890 945"
+            id="path62461" 
+            opacity="0.6" fill-rule="evenodd" clip-rule="evenodd"
                 d="M1983.76 1809.13L2015.84 1850.15L1984.82 1870.13L1949.06 1868.02L1946.96 1822.8L1956.95 1822.28L1969.04 1819.12L1976.93 1814.39L1983.76 1809.13Z"
                 fill="#23DD00" stroke="black" stroke-width="1.01458" />
             <path id="path62465" opacity="0.6" fill-rule="evenodd" clip-rule="evenodd"
@@ -7788,206 +7794,15 @@
         </defs>
         </g>
     </svg>
+    <div class="balloon" id="balloon">
+            <div class="location">
+                <h2 class="location__title">Участок <span></span></h2>
+                <p class="location__status"><span></span></p>
+                <p class="location__area">Площадь участка <span></span> кв.м.</p>
+                <p class="location__price">Стоимость участка <span></span> руб.</p>
+            </div>
+            <a class="balloon__button balloon__button--1" href="#" target="_blank">Записаться на просмотр</a>
+            <a class="balloon__button balloon__button--2" href="#" target="_blank">Выбрать дом</a>
+            <button class="balloon__close-button">X</div>
+        </div>  
 </div>
-
-
-
-<script>
-const container = document.getElementById('container');
-const svg = document.getElementById('svg');
-const inner = document.getElementById('inner');
-
-const viewBox = svg.viewBox.baseVal;
-const svgWidth = viewBox.width;
-const svgHeight = viewBox.height;
-
-let scale = 1;
-let translate = { x: 0, y: 0 };
-let isDragging = false;
-let start = { x: 0, y: 0 };
-let lastTouchDist = null;
-let lastTouchMid = null;
-
-function clamp(val, min, max) {
-    return Math.max(min, Math.min(max, val));
-}
-
-function getMinScale() {
-    return Math.max(
-    container.clientWidth / svgWidth,
-    container.clientHeight / svgHeight
-    );
-}
-
-function setTransition(enabled, mode = 'mouse') {
-    if (!enabled) {
-    inner.style.transition = 'none';
-    } else if (mode === 'touch') {
-    inner.style.transition = 'transform 0.05s linear';
-    } else {
-    inner.style.transition = 'transform 0.2s ease-out';
-    }
-}
-
-function updateTransform() {
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-
-    const scaledWidth = svgWidth * scale;
-    const scaledHeight = svgHeight * scale;
-
-    const minX = Math.min(0, containerWidth - scaledWidth);
-    const minY = Math.min(0, containerHeight - scaledHeight);
-
-    const maxX = 0;
-    const maxY = 0;
-
-    translate.x = clamp(translate.x, minX, maxX);
-    translate.y = clamp(translate.y, minY, maxY);
-
-    inner.style.transform = `translate(${translate.x}px, ${translate.y}px) scale(${scale})`;
-}
-
-function centerInitialView() {
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-
-    // Масштабируем по большей оси — чтобы SVG заполнило экран (с обрезкой краёв)
-    scale = Math.max(
-    containerWidth / svgWidth,
-    containerHeight / svgHeight
-    );
-
-    const scaledWidth = svgWidth * scale;
-    const scaledHeight = svgHeight * scale;
-
-    translate.x = (containerWidth - scaledWidth) / 2;
-    translate.y = (containerHeight - scaledHeight) / 2;
-
-    updateTransform();
-}
-
-// Мышь
-svg.addEventListener("mousedown", (e) => {
-    isDragging = true;
-    setTransition(false);
-    start = { x: e.clientX - translate.x, y: e.clientY - translate.y };
-    svg.style.cursor = "grabbing";
-});
-
-window.addEventListener("mousemove", (e) => {
-    if (!isDragging) return;
-    translate = {
-    x: e.clientX - start.x,
-    y: e.clientY - start.y
-    };
-    updateTransform();
-});
-
-window.addEventListener("mouseup", () => {
-    isDragging = false;
-    svg.style.cursor = "grab";
-});
-
-svg.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    setTransition(true, 'mouse');
-
-    const zoomSpeed = 0.0005;
-    const oldScale = scale;
-    scale += -e.deltaY * zoomSpeed;
-
-    // Без верхнего лимита
-    scale = Math.max(scale, getMinScale());
-
-    const rect = svg.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const dx = mouseX - translate.x;
-    const dy = mouseY - translate.y;
-
-    translate.x -= dx * (scale / oldScale - 1);
-    translate.y -= dy * (scale / oldScale - 1);
-
-    updateTransform();
-});
-
-// Тач
-svg.addEventListener("touchstart", (e) => {
-    setTransition(true, 'touch');
-
-    if (e.touches.length === 1) {
-    isDragging = true;
-    const touch = e.touches[0];
-    start = { x: touch.clientX - translate.x, y: touch.clientY - translate.y };
-    } else if (e.touches.length === 2) {
-    lastTouchDist = getDistance(e.touches[0], e.touches[1]);
-    lastTouchMid = getMidpoint(e.touches[0], e.touches[1]);
-    }
-});
-
-svg.addEventListener("touchmove", (e) => {
-    e.preventDefault();
-    setTransition(true, 'touch');
-
-    if (e.touches.length === 1 && isDragging) {
-    const touch = e.touches[0];
-    translate = {
-        x: touch.clientX - start.x,
-        y: touch.clientY - start.y
-    };
-    updateTransform();
-    } else if (e.touches.length === 2) {
-    const dist = getDistance(e.touches[0], e.touches[1]);
-    const mid = getMidpoint(e.touches[0], e.touches[1]);
-
-    if (lastTouchDist && lastTouchMid) {
-        const oldScale = scale;
-        const scaleFactor = dist / lastTouchDist;
-        scale *= scaleFactor;
-
-        // Без верхнего лимита
-        scale = Math.max(scale, getMinScale());
-
-        const dx = mid.x - translate.x;
-        const dy = mid.y - translate.y;
-
-        translate.x -= dx * (scale / oldScale - 1);
-        translate.y -= dy * (scale / oldScale - 1);
-
-        updateTransform();
-    }
-
-    lastTouchDist = dist;
-    lastTouchMid = mid;
-    }
-});
-
-svg.addEventListener("touchend", (e) => {
-    if (e.touches.length < 2) {
-    lastTouchDist = null;
-    lastTouchMid = null;
-    }
-    if (e.touches.length === 0) {
-    isDragging = false;
-    }
-});
-
-function getDistance(p1, p2) {
-    const dx = p2.clientX - p1.clientX;
-    const dy = p2.clientY - p1.clientY;
-    return Math.hypot(dx, dy);
-}
-
-function getMidpoint(p1, p2) {
-    return {
-    x: (p1.clientX + p2.clientX) / 2,
-    y: (p1.clientY + p2.clientY) / 2
-    };
-}
-
-// Инициализация
-window.addEventListener("resize", centerInitialView);
-centerInitialView();
-</script>
