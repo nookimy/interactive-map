@@ -23,7 +23,7 @@ jQuery(document).ready(function ($) {
         'path62463': { status: STATUS_HOUSE_BUILDING, number: '3276', area: 1810 },
         'path77406': { status: STATUS_HOUSE_READY, number: '3444', area: 1547 },
         'path80784': { status: STATUS_RESERVED, number: '3257', area: 1323 },
-        'p1-1': { number: 'Участок 3257' }
+        'p1-1': { number: 'Участок 1.1' }
     };
 
     // Функция окраски
