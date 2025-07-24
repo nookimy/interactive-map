@@ -44,7 +44,7 @@ const rootFolder = nodePath.basename(nodePath.resolve());
 // Базовые пути к файлам
 const basePath = {
   src: './_src',
-  dev: './dist', 
+  dev: './docs', 
   blocks: '_src/blocks',
   imgOpt: '_src/img',
 }
@@ -101,7 +101,7 @@ const paths = {
   },
   scripts: {
     src: ['_src/scripts/**/*.coffee', '_src/scripts/**/*.ts', '_src/scripts/**/*.js'],
-    dest: 'dist/js/'
+    dest: 'docs/js/'
   },  
 }
 
@@ -169,20 +169,6 @@ function html() {
   //.pipe(htmlmin({ collapseWhitespace: true }))
   // Подмена путей до изображений
   .pipe(replace('../', '/img/'))
-  .pipe(versionNumber({
-		'value' : '%DT%',
-    'append' : {
-      'key' : '_v',
-      'cover' : 0,
-        'to' : [
-            'css',
-            'js',
-        ]
-    },
-    'output' : {
-        'file' : './_src/version.json'
-    }
-  }))
   .pipe(htmlBeautify())
   .pipe(size({
     showFiles:true
