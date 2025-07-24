@@ -14,7 +14,6 @@ body {
   width: 100vw;
   height: 100vh;
   background: #f0f0f0;
-  cursor: grab;
   position: relative;
   user-select: none;
   -webkit-user-select: none;
@@ -28,6 +27,7 @@ svg {
           user-select: none;
   display: block;
   touch-action: none;
+  cursor: grab;
 }
 
 #inner {
@@ -71,7 +71,6 @@ svg {
 }
 
 .balloon {
-  width: 230px;
   position: absolute;
   bottom: 0;
   left: 0;
@@ -80,13 +79,21 @@ svg {
   border-radius: 8px;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
   z-index: 10;
-  min-width: 200px;
+  width: 100%;
+  max-width: 320px;
+  padding: 25px;
+}
+
+.balloon h2,
+.balloon p {
+  margin: 0;
+  padding: 0;
 }
 
 .balloon__close-button {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: -20px;
+  right: -20px;
   width: 40px;
   height: 40px;
   cursor: pointer;
