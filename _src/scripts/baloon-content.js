@@ -1,6 +1,4 @@
 jQuery(document).ready(function ($) {
-    const PRICE_PER_SQM = 5303;
-
     // Статусы
     const STATUS_FREE = 'Свободный участок';
     const STATUS_HOUSE_READY = 'Участок с готовым домом';
@@ -17,13 +15,14 @@ jQuery(document).ready(function ($) {
     };
 
     // Данные элементов (ключ — id path)
+    // Теперь цена указывается вручную в data.price
     const locationData = {
-        'path62461': { status: STATUS_FREE, number: '3665', area: 1669 },
-        'path62465': { status: STATUS_SOLD, number: '3277', area: 1132 },
-        'path62463': { status: STATUS_HOUSE_BUILDING, number: '3276', area: 1810 },
-        'path77406': { status: STATUS_HOUSE_READY, number: '3444', area: 1547 },
-        'path80784': { status: STATUS_RESERVED, number: '3257', area: 1323 },
-        'p1-1': { number: 'Участок 1.1' }
+        'path62461': { status: STATUS_FREE, name: 'Участок 3665', area: 1669, price: '8 840 000' },
+        'path62465': { status: STATUS_SOLD, name: 'Участок 3277', area: 1132, price: '6 000 000' },
+        'path62463': { status: STATUS_HOUSE_BUILDING, name: 'Участок 3276', area: 1810, price: '9 500 000' },
+        'path77406': { status: STATUS_HOUSE_READY, name: 'Участок 3444', area: 1547, price: '7 900 000' },
+        'path80784': { status: STATUS_RESERVED, name: 'Участок 3257', area: 1323, price: '6 700 000' },
+        'p1-1': { name: 'Участок 3257', price: '6 700 000' }
     };
 
     // Функция окраски
@@ -41,29 +40,31 @@ jQuery(document).ready(function ($) {
         const data = locationData[id];
         const attrs = {};
 
-        // Если указан статус
-        if (data.status) {
-            attrs['data-locationname'] = data.status;
-            setStatusColor($elem, data.status);
+        // Добавляем имя (номер/название) в data-locationname
+        if (data.name) {
+            attrs['data-locationname'] = data.name;
         }
 
-        // Если указан номер
-        if (data.number) {
-            attrs['data-locationnumber'] = data.number;
-        }
-
-        // Если указана площадь (и цена)
+        // Добавляем площадь если есть
         if (data.area) {
             attrs['data-locationarea'] = data.area;
-            attrs['data-locationprice'] = data.area * PRICE_PER_SQM;
         }
 
-        // Применяем атрибуты (если они есть)
+        // Добавляем цену из данных
+        if (data.price) {
+            attrs['data-locationprice'] = data.price;
+        }
+
         if (Object.keys(attrs).length) {
             $elem.attr(attrs);
         }
 
-        // Стили с плавной прозрачностью для всех элементов
+        // Окрашиваем по статусу
+        if (data.status) {
+            setStatusColor($elem, data.status);
+        }
+
+        // Стили с плавной прозрачностью
         $elem.css({
             'cursor': 'pointer',
             'opacity': '0.7',
@@ -74,18 +75,18 @@ jQuery(document).ready(function ($) {
         );
     });
 
-    // Клик по элементу (если он есть в locationData)
+    // Клик по элементу
     $('#map').on('click', 'path', function () {
         const id = $(this).attr('id');
         if (!id || !locationData[id]) return;
 
         const data = locationData[id];
         const status = data.status || '';
-        const number = data.number || '';
+        const name = data.name || '';
         const area = data.area || '';
-        const price = data.area ? data.area * PRICE_PER_SQM : '';
+        const price = data.price || '';
 
-        // Функция для замены текста и управления видимостью
+        // Функция замены текста и управления видимостью
         function updateField(selector, value) {
             const $el = $(selector);
             if (value) {
@@ -95,8 +96,8 @@ jQuery(document).ready(function ($) {
             }
         }
 
-        // Заполняем balloon с проверкой на наличие данных
-        updateField(".location__title", number);
+        // Заполняем balloon с проверкой
+        updateField(".location__title", name);
         updateField(".location__status", status);
         updateField(".location__area", area);
         updateField(".location__price", price);
