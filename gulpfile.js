@@ -15,20 +15,12 @@ const concat = require('gulp-concat')
 const sourcemaps = require('gulp-sourcemaps')
 const autoprefixer = require('gulp-autoprefixer')
 const svgo = require('gulp-svgo');
-const svgSprite = require('gulp-svg-sprite')
 const size = require('gulp-size')
-const newer = require('gulp-newer')
 const browsersync = require('browser-sync').create()
 const del = require('del')
 const posthtml = require('gulp-posthtml')
 const include = require('posthtml-include')
 const htmlBeautify = require('gulp-html-beautify')
-const tinypng = require('gulp-tinypng-extended')
-const responsive = require('gulp-responsive')
-const responsiveConfig = require('gulp-responsive-config')
-const webp = require('gulp-webp')
-const fonter = require('gulp-fonter')
-const ttf2woff2 = require('gulp-ttf2woff2')
 
 // Получаем имя папки проекта (gulp_build)
 const rootFolder = nodePath.basename(nodePath.resolve());
@@ -137,6 +129,7 @@ function clean() {
 function reset() {
   return del(basePath.dev)
 }
+
 // Тестовая задача по копированию
 function copy() {
   return gulp.src(paths.files.src)
@@ -157,9 +150,6 @@ function html() {
   .pipe(posthtml([
     include()
   ]))
-  //.pipe(gulppug())
-  //.pipe(htmlmin({ collapseWhitespace: true }))
-  // Подмена путей до изображений
   .pipe(replace('../', '/img/'))
   .pipe(htmlBeautify())
   .pipe(size({
@@ -243,274 +233,9 @@ function scripts() {
   .pipe(browsersync.stream())
 }
 
-// Оптимизируем jpg и png с помощью стороннего сервиса tinypng.com (бесплатно 500 файлов в месяц)
-function imgopt(done) {
-  blocks.forEach (function (block) {
-    console.log(block)
-    return gulp.src(paths.images.src + '/' + block + '/*.{jpg,jpeg,png}')    
-    .pipe(newer(paths.images.dest + '/' + block + '/'))
-    .pipe(tinypng({
-        key: 'jO4jokCHdaoyAiRSqQifbkbQzjh9LaQD',
-        sigFile: paths.images.dest + '/.tinypng-sigs',
-        log: true,
-    }))
-    .pipe(gulp.dest(paths.images.dest + '/' + block + '/'))
-    
-  });
-  
-  done();
-}
 
-// Оптимизируем svg
-function svgopt(done) {
-  blocks.forEach (function (block) {
-    return gulp.src(paths.images.src + '/' + block + '/*.svg')
-    .pipe(plumber(
-      notify.onError({
-          title: "Ошибка SVG OPT",
-          message: "Error: <%= error.message %>"
-      }))
-    )
-    .pipe(newer(paths.images.dest + '/' + block + '/'))
 
-    .pipe(svgo({
-      plugins: [
-          {removeXMLNS: false},
-          {removeUselessStrokeAndFill: false},
-          {convertColors: true},
-          {removeAttrs: '(style)'},
-          {removeViewBox: false},
-          {sortAttrs: true}
-      ]
-    }))
-    
-    .pipe(gulp.dest(paths.images.dest + '/' + block + '/'))
-  });
-  done();
-}
 
-function imgresponsive(done) {
-  blocks.forEach (function (block) {
-    const config = responsiveConfig([
-        basePath.blocks + '/' + block + '/*.scss',
-        basePath.blocks + '/' + block + '/*.html'
-    ]);
-
-    // Возьми все изображения из папки
-    return gulp.src(basePath.imgOpt + '/' + block + '/*.{jpg,jpeg,png}')
-
-        .pipe(plumber(
-            notify.onError({
-                title: "Ошибка задачи IMAGES",
-                message: "Error: <%= error.message %>"
-            }))
-        )
-
-        .pipe(responsive(config, {
-            errorOnEnlargement: false,
-            quality: 80,
-            withMetadata: false,
-            compressionLevel: 7,
-        }))
-        .pipe(gulp.dest(paths.imagesOpt.dest + block + '/'))
-
-  });
-  done();
-}
-
-function imgwebp() {
-  return gulp.src(basePath.dev + '/img/**/*.{jpg,jpeg,png}')
-  .pipe(webp())
-  .pipe(gulp.dest(basePath.dev + '/img/'))
-}
-
-function copySvg() {
-  return gulp.src(paths.imagesOpt.src + '/**/*.svg')
-  // Уведомления об ошибках
-  .pipe(plumber(
-    notify.onError({
-        title: "Ошибка копирования SVG",
-        message: "Error: <%= error.message %>"
-    }))
-  )
-  .pipe(newer(paths.imagesOpt.dest))
-  .pipe(gulp.dest(paths.imagesOpt.dest))
-}
-
-function svgSprive() {
-  let config = {
-    mode: {
-        symbol: {
-            dest : '',
-            sprite: 'sprite.svg',
-        }
-    },
-    svg: {
-        namespaceClassnames: false,
-        xmlDeclaration: true,
-    },
-    shape: {
-        spacing: {
-            padding: 0
-        },
-        transform: [{
-            "svgo": {
-                "plugins": [
-                    {
-                        name: 'removeXMLNS',
-                        params: {
-                            opationName: 'true'
-                        }
-                    },
-
-                ]
-            }
-        }]
-    },
-  };
-
-  return gulp.src(paths.svgicons.src, {})
-  .pipe(plumber(
-      notify.onError({
-          title: "Ошибка создания SVG-спрайта",
-          message: "Error: <%= error.message %>"
-      }))
-  )
-  .pipe(replace('fill="none" ', ''))
-  .pipe(svgSprite(config))
-  .pipe(gulp.dest(paths.svgicons.dest))
-}
-
-function otfToTtf() {
-  // Ищем файлы шрифтов .otf
-  return gulp.src(paths.fonts.src + '*.otf', {})
-        // Уведомления об ошибках
-        .pipe(plumber(
-          notify.onError({
-              title: "Ошибка FONTS",
-              message: "Error: <%= error.message %>"
-          }))
-        )
-        // Конвертируем в .ttf
-        .pipe(fonter({
-            formats: ['ttf']
-        }))
-        // Выгружаем в исходную папку
-        .pipe(gulp.dest(paths.fonts.src))
-}
-
-function ttfToWoff() {
-  // Ищем файлы шрифтов .ttf
-  return gulp.src(paths.fonts.src + '*.ttf', {})
-      // Уведомления об ошибках
-      .pipe(plumber(
-        notify.onError({
-            title: "Ошибка FONTS",
-            message: "Error: <%= error.message %>"
-        }))
-      )
-      // Конвертируем в .woff
-      .pipe(fonter({
-          formats: ['woff']
-      }))
-      // Выгружаем в папку c результатом
-      .pipe(gulp.dest(paths.fonts.dest))
-
-      // Ищем файлы шрифтов .ttf
-      .pipe(gulp.src(paths.fonts.src + '*.ttf'))
-      // Конвертируем в .woff2
-      .pipe(ttf2woff2())
-      // Выгружаем в папку c результатом
-      .pipe(gulp.dest(paths.fonts.dest))
-}
-
-// Формирование и подключение файла шрифтов в стили
-function fontsStyle() {
-  // Файл стилей подключения шрифтов
-  let fontsFile = basePath.src + '/styles/fonts.scss';
-
-  // Проверяем существуют ли файлы шрифтов
-  fs.readdir(paths.fonts.dest, function (err, fontsFiles){
-      if (fontsFiles) {
-          // Проверяем существует ли файл стилей для подключения шрифтов
-          if (!fs.existsSync(fontsFile)) {
-              // Если файла нет, создаем его
-              fs.writeFile(fontsFile, '', cb);
-              let newFileOnly;
-              for (let i = 0; i < fontsFiles.length; i++) {
-                  // Записываем подключения шрифтов в файл стилей
-                  let fontFileName = fontsFiles[i].split('.')[0];
-                  if (newFileOnly !== fontFileName) {
-                      let fontName = fontFileName.split('-')[0] ? fontFileName.split('-')[0] : fontFileName;
-                      let fontWeight = fontFileName.split('-')[1] ? fontFileName.split('-')[1] : fontFileName;
-                      let fontStyle = 'normal';
-                      if (fontWeight.toLowerCase() === 'thinitalic') {
-                          fontWeight = 100,
-                          fontStyle = 'italic';
-                      } else if (fontWeight.toLowerCase() === 'extralightitalic') {
-                          fontWeight = 200,
-                          fontStyle = 'italic';
-                      } else if (fontWeight.toLowerCase() === 'lightitalic') {
-                          fontWeight = 300,
-                          fontStyle = 'italic';
-                      } else if (fontWeight.toLowerCase() === 'mediumitalicitalic') {
-                          fontWeight = 500,
-                          fontStyle = 'italic';
-                      } else if (fontWeight.toLowerCase() === 'semibolditalic') {
-                          fontWeight = 600,
-                          fontStyle = 'italic';
-                      } else if (fontWeight.toLowerCase() === 'bolditalic') {
-                          fontWeight = 700,
-                          fontStyle = 'italic';
-                      } else if (fontWeight.toLowerCase() === 'extrabolditalic') {
-                          fontWeight = 800,
-                          fontStyle = 'italic';
-                      } else if (fontWeight.toLowerCase() === 'blackitalic') {
-                          fontWeight = 900,
-                          fontStyle = 'italic';
-                      } else if (fontWeight.toLowerCase() === 'italic') {
-                          fontWeight = 400,
-                          fontStyle = 'italic';
-                      } else if (fontWeight.toLowerCase() === 'thin') {
-                          fontWeight = 100;
-                      } else if (fontWeight.toLowerCase() === 'extralight') {
-                          fontWeight = 200;
-                      } else if (fontWeight.toLowerCase() === 'light') {
-                          fontWeight = 300;
-                      } else if (fontWeight.toLowerCase() === 'medium') {
-                          fontWeight = 500;
-                      } else if (fontWeight.toLowerCase() === 'semibold') {
-                          fontWeight = 600;
-                      } else if (fontWeight.toLowerCase() === 'bold') {
-                          fontWeight = 700;
-                      } else if (fontWeight.toLowerCase() === 'extrabold') {
-                          fontWeight = 800;
-                      } else if (fontWeight.toLowerCase() === 'black') {
-                          fontWeight = 900;
-                      } else {
-                          fontWeight = 400;
-                      }
-                      fs.appendFile(fontsFile,
-                      `@font-face {\n\tfont-family: "${fontName}";\n\tfont-display: swap;\n\tsrc:\n\t\tlocal("${fontName}"),\n\t\turl("./src/fonts/${fontFileName}.woff2") format("woff2"),\n\t\turl("./src/fonts/${fontFileName}.woff") format("woff");\n\tfont-weight: ${fontWeight};\n\tfont-style: ${fontStyle};\r\n}\r\n`,cb);
-                      newFileOnly = fontFileName;
-                  }
-              }
-          } else {
-              // Если файл есть, выводим сообщение
-              console.log("Файл scss/fonts.scss уже существует. Для обновления файла нужно его удалить!")
-          }
-      }
-  });
-
-  return gulp.src(basePath.src + '/styles/');
-  function cb() {}
-}
-
-function copyFonts() {
-  return gulp.src(basePath.src + '/fonts/**.{woff,woff2}')
-    .pipe(newer(basePath.dev + '/fonts/'))
-    .pipe(gulp.dest(basePath.dev + '/fonts/'))
-}
 
 // Отслеживание изменений в файлах и запуск лайв сервера
 function watch() {  
@@ -524,9 +249,6 @@ function watch() {
   gulp.watch(paths.html.watch, html)
   gulp.watch(paths.stylesScss.watch, stylesScss)
   gulp.watch(paths.scripts.src, scripts)
-  gulp.watch(paths.images.src, imgopt, svgopt)
-  //gulp.watch(paths.imagesOpt.src, img, copySvg)
-  gulp.watch(paths.svgicons.watch, svgSprive)
 }
 
 // Таски для ручного запуска с помощью gulp clean, gulp html и т.д.
@@ -536,32 +258,13 @@ exports.copy = copy
 exports.html = html
 exports.styles = stylesScss
 exports.scripts = scripts
-exports.imgopt = imgopt
-exports.svgopt = svgopt
-exports.imgresponsive = imgresponsive
-exports.imgwebp = imgwebp
-exports.copySvg = copySvg
-exports.svgSprive = svgSprive
-exports.copyFonts = copyFonts
 exports.watch = watch
 
-// Последовательная обработка шрифтов (отдельная задача, не включена в сценарии)
-const fonts = gulp.series(otfToTtf, ttfToWoff, fontsStyle);
-
-// Нарезка изображений и создание webp (отдельная задача, не включена в сценарии)
-const img = gulp.series(imgresponsive, imgwebp);
-
 // Основные задачи
-const mainTasks = gulp.parallel(stylesScss, scripts, img);
+const mainTasks = gulp.parallel(stylesScss, scripts);
 
 // Построение сценариев выполнения задач
-const dev = gulp.series(clean, copyFonts, svgopt, svgSprive, copy, html, mainTasks, watch);
+const dev = gulp.series(clean, copy, html, mainTasks, watch);
 
 // Таск, который выполняется по команде gulp
 exports.default = dev;
-
-// Таск, который выполняется по команде gulp fonts
-exports.fonts = fonts;
-
-// Таск, который выполняется по команде gulp fonts
-exports.img = img;
