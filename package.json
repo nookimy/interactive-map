@@ -35,6 +35,6 @@
     "gulp-uglify": "^3.0.2",
     "laravel-elixir-group-css-media-queries": "^1.0.0",
     "posthtml-include": "^2.0.1",
-    "sass": "^1.77.8",
+    "sass": "^1.77.8"
   }
 }

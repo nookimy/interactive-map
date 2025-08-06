@@ -14,7 +14,6 @@ const uglify = require('gulp-uglify')
 const concat = require('gulp-concat')
 const sourcemaps = require('gulp-sourcemaps')
 const autoprefixer = require('gulp-autoprefixer')
-const svgo = require('gulp-svgo');
 const size = require('gulp-size')
 const browsersync = require('browser-sync').create()
 const del = require('del')
