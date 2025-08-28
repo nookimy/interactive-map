@@ -32,7 +32,7 @@ $(function() {
       $inner.css('transition', 'transform 0.09s ease-out');
     } else {
       // плавность при колесике и кнопках
-      $inner.css('transition', 'transform 0.3s ease-out');
+      $inner.css('transition', 'transform 0.2s ease-out');
     }
   }
 
