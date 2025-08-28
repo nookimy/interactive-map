@@ -11,25 +11,22 @@ $(function() {
   let translate = { x: 0, y: 0 };
   let isDragging = false;
   let start = { x: 0, y: 0 };
+  let pointers = new Map();
   let lastTouchDist = null;
   let lastTouchMid = null;
+  const maxScale = 5; // ограничение максимального масштаба
 
   function clamp(val, min, max) {
     return Math.max(min, Math.min(max, val));
   }
 
   function getMinScale() {
-    return Math.max(
-      $map.width() / svgWidth,
-      $map.height() / svgHeight
-    );
+    return Math.max($map.width() / svgWidth, $map.height() / svgHeight);
   }
 
   function setTransition(enabled, mode = 'mouse') {
-    if (!enabled) {
+    if (!enabled || mode === 'touch') {
       $inner.css('transition', 'none');
-    } else if (mode === 'touch') {
-      $inner.css('transition', 'transform 0.05s linear');
     } else {
       $inner.css('transition', 'transform 0.2s ease-out');
     }
@@ -58,10 +55,7 @@ $(function() {
     const mapWidth = $map.width();
     const mapHeight = $map.height();
 
-    scale = Math.max(
-      mapWidth / svgWidth,
-      mapHeight / svgHeight
-    );
+    scale = Math.max(mapWidth / svgWidth, mapHeight / svgHeight);
 
     const scaledWidth = svgWidth * scale;
     const scaledHeight = svgHeight * scale;
@@ -72,29 +66,87 @@ $(function() {
     updateTransform();
   }
 
-  // Мышь
-  $svg.on('mousedown', function(e) {
-    isDragging = true;
-    setTransition(false);
-    start = { x: e.clientX - translate.x, y: e.clientY - translate.y };
-    $svg.css('cursor', 'grabbing');
-  });
+  function getDistance(p1, p2) {
+    const dx = p2.clientX - p1.clientX;
+    const dy = p2.clientY - p1.clientY;
+    return Math.hypot(dx, dy);
+  }
 
-  $(window).on('mousemove', function(e) {
-    if (!isDragging) return;
-    translate = {
-      x: e.clientX - start.x,
-      y: e.clientY - start.y
+  function getMidpoint(p1, p2) {
+    return {
+      x: (p1.clientX + p2.clientX) / 2,
+      y: (p1.clientY + p2.clientY) / 2
     };
-    updateTransform();
+  }
+
+  // --- Pointer Events для мыши и тача ---
+  $svg.on('pointerdown', function(e) {
+    $svg.css('touch-action', 'none'); // отключаем стандартное масштабирование
+    pointers.set(e.pointerId, e);
+
+    if (pointers.size === 1) {
+      isDragging = true;
+      start = { x: e.clientX - translate.x, y: e.clientY - translate.y };
+      $svg.css('cursor', 'grabbing');
+    } else if (pointers.size === 2) {
+      const pts = Array.from(pointers.values());
+      lastTouchDist = getDistance(pts[0], pts[1]);
+      lastTouchMid = getMidpoint(pts[0], pts[1]);
+    }
   });
 
-  $(window).on('mouseup', function() {
-    isDragging = false;
-    $svg.css('cursor', 'grab');
+  $svg.on('pointermove', function(e) {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, e);
+
+    if (pointers.size === 1 && isDragging) {
+      const p = e;
+      translate = {
+        x: p.clientX - start.x,
+        y: p.clientY - start.y
+      };
+      setTransition(false, 'touch');
+      updateTransform();
+    } else if (pointers.size === 2) {
+      const pts = Array.from(pointers.values());
+      const dist = getDistance(pts[0], pts[1]);
+      const mid = getMidpoint(pts[0], pts[1]);
+
+      if (lastTouchDist && lastTouchMid) {
+        const oldScale = scale;
+        const scaleFactor = dist / lastTouchDist;
+        scale *= scaleFactor;
+        scale = Math.max(scale, getMinScale());
+        scale = Math.min(scale, maxScale);
+
+        const dx = mid.x - translate.x;
+        const dy = mid.y - translate.y;
+
+        translate.x -= dx * (scale / oldScale - 1);
+        translate.y -= dy * (scale / oldScale - 1);
+
+        setTransition(false, 'touch');
+        updateTransform();
+      }
+
+      lastTouchDist = dist;
+      lastTouchMid = mid;
+    }
   });
 
-  // Колесо мыши для зума
+  $svg.on('pointerup pointercancel', function(e) {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) {
+      lastTouchDist = null;
+      lastTouchMid = null;
+    }
+    if (pointers.size === 0) {
+      isDragging = false;
+      $svg.css('cursor', 'grab');
+    }
+  });
+
+  // --- Колесо мыши с плавностью ---
   $svg.on('wheel', function(e) {
     e.preventDefault();
     setTransition(true, 'mouse');
@@ -102,8 +154,8 @@ $(function() {
     const zoomSpeed = 0.0005;
     const oldScale = scale;
     scale += -e.originalEvent.deltaY * zoomSpeed;
-
-    scale = Math.max(scale, getMinScale()); // минимум
+    scale = Math.max(scale, getMinScale());
+    scale = Math.min(scale, maxScale);
 
     const rect = $svg[0].getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -118,90 +170,13 @@ $(function() {
     updateTransform();
   });
 
-  // Тач
-  $svg.on('touchstart', function(e) {
-    setTransition(true, 'touch');
-    const touches = e.originalEvent.touches;
-
-    if (touches.length === 1) {
-      isDragging = true;
-      const touch = touches[0];
-      start = { x: touch.clientX - translate.x, y: touch.clientY - translate.y };
-    } else if (touches.length === 2) {
-      lastTouchDist = getDistance(touches[0], touches[1]);
-      lastTouchMid = getMidpoint(touches[0], touches[1]);
-    }
-  });
-
-  $svg.on('touchmove', function(e) {
-    e.preventDefault();
-    setTransition(true, 'touch');
-    const touches = e.originalEvent.touches;
-
-    if (touches.length === 1 && isDragging) {
-      const touch = touches[0];
-      translate = {
-        x: touch.clientX - start.x,
-        y: touch.clientY - start.y
-      };
-      updateTransform();
-    } else if (touches.length === 2) {
-      const dist = getDistance(touches[0], touches[1]);
-      const mid = getMidpoint(touches[0], touches[1]);
-
-      if (lastTouchDist && lastTouchMid) {
-        const oldScale = scale;
-        const scaleFactor = dist / lastTouchDist;
-        scale *= scaleFactor;
-
-        scale = Math.max(scale, getMinScale());
-
-        const dx = mid.x - translate.x;
-        const dy = mid.y - translate.y;
-
-        translate.x -= dx * (scale / oldScale - 1);
-        translate.y -= dy * (scale / oldScale - 1);
-
-        updateTransform();
-      }
-
-      lastTouchDist = dist;
-      lastTouchMid = mid;
-    }
-  });
-
-  $svg.on('touchend', function(e) {
-    const touches = e.originalEvent.touches;
-    if (touches.length < 2) {
-      lastTouchDist = null;
-      lastTouchMid = null;
-    }
-    if (touches.length === 0) {
-      isDragging = false;
-    }
-  });
-
-  // Функции для расстояния и середины
-  function getDistance(p1, p2) {
-    const dx = p2.clientX - p1.clientX;
-    const dy = p2.clientY - p1.clientY;
-    return Math.hypot(dx, dy);
-  }
-
-  function getMidpoint(p1, p2) {
-    return {
-      x: (p1.clientX + p2.clientX) / 2,
-      y: (p1.clientY + p2.clientY) / 2
-    };
-  }
-
   // --- Кнопки управления ---
-
   $('#zoom-in').on('click', function() {
     const oldScale = scale;
     const zoomFactor = 1.2;
     scale *= zoomFactor;
     scale = Math.max(scale, getMinScale());
+    scale = Math.min(scale, maxScale);
 
     const rect = $map[0].getBoundingClientRect();
     const centerX = rect.width / 2;
@@ -222,6 +197,7 @@ $(function() {
     const zoomFactor = 1.2;
     scale /= zoomFactor;
     scale = Math.max(scale, getMinScale());
+    scale = Math.min(scale, maxScale);
 
     const rect = $map[0].getBoundingClientRect();
     const centerX = rect.width / 2;
@@ -239,10 +215,9 @@ $(function() {
 
   $('#reset').on('click', function() {
     centerInitialView();
-    setTransition(true, 'mouse');
   });
 
-  // Инициализация
+  // --- Инициализация ---
   $(window).on('resize', centerInitialView);
   centerInitialView();
 });
