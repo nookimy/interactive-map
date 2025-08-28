@@ -29,10 +29,10 @@ $(function() {
       $inner.css('transition', 'none');
     } else if (mode === 'mouse-drag') {
       // плавность при перетаскивании мышью
-      $inner.css('transition', 'transform 0.03s ease-out');
+      $inner.css('transition', 'transform 0.09s ease-out');
     } else {
       // плавность при колесике и кнопках
-      $inner.css('transition', 'transform 0.38s ease-out');
+      $inner.css('transition', 'transform 0.3s ease-out');
     }
   }
 
