@@ -27,10 +27,15 @@ $(function() {
   function setTransition(enabled, mode = 'mouse') {
     if (!enabled || mode === 'touch') {
       $inner.css('transition', 'none');
+    } else if (mode === 'mouse-drag') {
+      // плавность при перетаскивании мышью
+      $inner.css('transition', 'transform 0.03s ease-out');
     } else {
-      $inner.css('transition', 'transform 0.09s ease-out'); // плавность для мыши
+      // плавность при колесике и кнопках
+      $inner.css('transition', 'transform 0.38s ease-out');
     }
   }
+
 
   function updateTransform() {
     const mapWidth = $map.width();
