@@ -108,14 +108,12 @@ function html() {
 // SCSS → CSS
 function stylesScss() {
   return gulp.src(paths.stylesScss.src)
-    .pipe(sourcemaps.init())
     .pipe(plumber(notify.onError({ title: "Ошибка SCSS", message: "Error: <%= error.message %>" })))
-    .pipe(sass({ outputStyle: 'expanded', implementation: dartSass })) // 👈 передаем implementation
+    .pipe(sass({ outputStyle: 'expanded', implementation: dartSass }))
     .pipe(groupCssMediaQueries())
     .pipe(replace('../', '../img/'))
     .pipe(replace('./src/fonts/', '../fonts/'))
     .pipe(autoprefixer({ grid: true, overrideBrowserslist: ["last 3 versions"], cascade: true }))
-    .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(paths.stylesScss.dest))
     .pipe(cleanCSS({ level: 2 }))
     .pipe(rename({ basename: 'style', suffix: '.min' }))
@@ -125,20 +123,20 @@ function stylesScss() {
 }
 
 
+
 // JS (копируем + минифицируем)
 function scripts() {
   return gulp.src(paths.scripts.src)
     .pipe(newer(paths.scripts.dest))
     .pipe(gulp.dest(paths.scripts.dest))
-    .pipe(sourcemaps.init())
     .pipe(babel({ presets: ['@babel/env'] }))
     .pipe(uglify())
     .pipe(concat('main.min.js'))
-    .pipe(sourcemaps.write('.'))
     .pipe(size({ showFiles: true }))
     .pipe(gulp.dest(paths.scripts.dest))
     .pipe(browsersync.stream())
 }
+
 
 // Копирование картинок
 function imagesCopy() {

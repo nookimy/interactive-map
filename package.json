@@ -1,17 +1,18 @@
 {
   "name": "gulp-build",
   "version": "1.0.0",
-  "description": "Сборка проекта на Gulp",
+  "description": "Сборка проекта с использованием Gulp, Babel, Sass и BrowserSync",
   "main": "gulpfile.js",
   "scripts": {
     "clean": "rm -rf node_modules",
     "cleandist": "rm -rf dist",
     "update": "npm update --save-dev && npm update --save",
+    "start": "gulp",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["gulp", "build", "sass", "babel", "browser-sync", "frontend"],
   "author": "Alina Korotkova",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
