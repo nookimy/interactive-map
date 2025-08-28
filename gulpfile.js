@@ -5,7 +5,8 @@ const fs = require('fs')
 const replace = require('gulp-replace')
 const plumber = require('gulp-plumber')
 const notify = require("gulp-notify")
-const sass = require('gulp-sass')(require('sass'))
+const dartSass = require('sass');
+const sass = require('gulp-dart-sass');
 const rename = require('gulp-rename')
 const cleanCSS = require('gulp-clean-css')
 const groupCssMediaQueries = require('gulp-group-css-media-queries')
@@ -20,19 +21,20 @@ const del = require('del')
 const posthtml = require('gulp-posthtml')
 const include = require('posthtml-include')
 const htmlBeautify = require('gulp-html-beautify')
+const newer = require('gulp-newer')
 
-// Получаем имя папки проекта (gulp_build)
+// Имя папки проекта
 const rootFolder = nodePath.basename(nodePath.resolve());
 
 // Базовые пути к файлам
 const basePath = {
   src: './_src',
-  dev: './docs', 
+  dev: './docs',
   blocks: '_src/blocks',
   imgOpt: '_src/img',
 }
 
-// Пути к отдельным компонентам
+// Пути к файлам
 const paths = {
   files: {
     src: basePath.src + '/files/**/*.*',
@@ -42,36 +44,22 @@ const paths = {
   html: {
     src: [basePath.src + '/*.html', basePath.src + '/*.pug'],
     dest: basePath.dev,
-    watch: 
-      [basePath.src + '/*.html',
-        // Чтобы watch не тормозил прописываем каждую папку отдельно
-        // Ниже по коду добавим пути к файлам отдельными блоками
-      ],
+    watch: [],
   },
   stylesScss: {
     src: basePath.src + '/styles/style.scss',
     dest: basePath.dev + '/css/',
-    watch: 
-    [basePath.src + '/styles/*.scss',
-      // Чтобы watch не тормозил прописываем каждую папку отдельно
-      // Ниже по коду добавим пути к файлам отдельными блоками
-    ],
+    watch: [],
   },
   images: {
     src: basePath.blocks,
     dest: basePath.imgOpt,
-    watch: [
-      // Чтобы watch не тормозил прописываем каждую папку отдельно
-      // Ниже по коду добавим пути к файлам отдельными блоками
-    ],
+    watch: [],
   },
   imagesOpt: {
     src: basePath.imgOpt,
     dest: basePath.dev + '/img/',
-    watch: [
-      // Чтобы watch не тормозил прописываем каждую папку отдельно
-      // Ниже по коду добавим пути к файлам отдельными блоками
-    ],    
+    watch: [],
   },
   svgicons: {
     src: basePath.imgOpt + '/icons/icon-*.svg',
@@ -85,185 +73,108 @@ const paths = {
   scripts: {
     src: ['_src/scripts/**/*.coffee', '_src/scripts/**/*.ts', '_src/scripts/**/*.js'],
     dest: 'docs/js/'
-  },  
+  },
 }
 
-// Массив для списка папок блоков
-const blocks = [];
+// Массив блоков
+const blocks = []
 
-
-// Получаем список блоков и записываем их в массив blocks
 if (basePath.blocks) {
   fs.readdirSync(basePath.blocks).forEach(function (directory) {
-      blocks.push(directory);
-  });
+    blocks.push(directory)
+  })
 }
 
-// Добавляем к paths.html.watch пути к блокам
-blocks.forEach (function (block) {
-  paths.html.watch.push(basePath.blocks + '/' + block + '/*.html');
-});
+// Watch пути по блокам
+blocks.forEach(function (block) {
+  paths.html.watch.push(basePath.blocks + '/' + block + '/*.html')
+  paths.stylesScss.watch.push(basePath.blocks + '/' + block + '/*.scss')
+  paths.images.watch.push(basePath.blocks + '/' + block + '/*.{jpg,jpeg,png}')
+  paths.imagesOpt.watch.push(basePath.imgOpt + '/' + block + '/*.{jpg,jpeg,png}')
+})
 
-// Добавляем к paths.stylesScss.watch пути к блокам
-blocks.forEach (function (block) {
-  paths.stylesScss.watch.push(basePath.blocks + '/' + block + '/*.scss');
-});
-
-// Добавляем к paths.images.watch пути к блокам
-blocks.forEach (function (block) {
-  paths.images.watch.push(basePath.blocks + '/' + block + '/*.{jpg,jpeg,png}');
-});
-
-// Добавляем к paths.imagesOpt.watch пути к блокам
-blocks.forEach (function (block) {
-  paths.imagesOpt.watch.push(basePath.imgOpt + '/' + block + '/*.{jpg,jpeg,png}');
-});
-
-// Очистить каталог dist, удалить все кроме изображений и шрифтов
-function clean() {
-  return del(['dist/*', '!dist/img', '!dist/fonts'])
-}
-
-// Очистить каталог dist полностью
-function reset() {
-  return del(basePath.dev)
-}
-
-// Тестовая задача по копированию
-function copy() {
-  return gulp.src(paths.files.src)
-   .pipe(gulp.dest(paths.files.dest))
-}
-
-// Обработка html и pug
-
+// HTML
 function html() {
   return gulp.src(paths.html.src)
-  // Уведомления об ошибках
-  .pipe(plumber(
-    notify.onError({
-        title: "Ошибка HTML",
-        message: "Error: <%= error.message %>"
-    }))
-  )
-  .pipe(posthtml([
-    include()
-  ]))
-  .pipe(replace('../', '/img/'))
-  .pipe(htmlBeautify())
-  .pipe(size({
-    showFiles:true
-  }))
-  .pipe(gulp.dest(paths.html.dest))
-  .pipe(browsersync.stream())
+    .pipe(plumber(notify.onError({ title: "Ошибка HTML", message: "Error: <%= error.message %>" })))
+    .pipe(posthtml([include()]))
+    .pipe(replace('../', '/img/'))
+    .pipe(htmlBeautify())
+    .pipe(size({ showFiles: true }))
+    .pipe(gulp.dest(paths.html.dest))
+    .pipe(browsersync.stream())
 }
 
-// Обработка препроцессоров стилей
+// SCSS → CSS
 function stylesScss() {
   return gulp.src(paths.stylesScss.src)
-  .pipe(sourcemaps.init())
-  .pipe(plumber(
-    notify.onError({
-        title: "Ошибка SCSS",
-        message: "Error: <%= error.message %>"
-    }))
-  )
-  // Преобразование в css
-  .pipe(sass({
-    outputStyle: 'expanded'
-  }))
-
-  .pipe(groupCssMediaQueries())
-
-  // Подмена путей до изображений
-  .pipe(replace('../', '../img/'))
-  .pipe(replace('./src/fonts/', '../fonts/'))
-
-  .pipe(autoprefixer(
-    {
-        grid: true,
-        overrideBrowserlist: ["last 3 versions"],
-        cascade: true
-    }
-  ))  
-  .pipe(sourcemaps.write('.'))
-  
-
-  .pipe(gulp.dest(paths.stylesScss.dest))
-
-  .pipe(cleanCSS({
-    level: 2
-  }))
-
-  .pipe(rename({
-    basename: 'style',
-    suffix: '.min'
-  }))  
-  
-  
-  .pipe(size({
-    showFiles:true
-  }))
-  .pipe(gulp.dest(paths.stylesScss.dest))
-  .pipe(browsersync.stream())
+    .pipe(sourcemaps.init())
+    .pipe(plumber(notify.onError({ title: "Ошибка SCSS", message: "Error: <%= error.message %>" })))
+    .pipe(sass({ outputStyle: 'expanded', implementation: dartSass })) // 👈 передаем implementation
+    .pipe(groupCssMediaQueries())
+    .pipe(replace('../', '../img/'))
+    .pipe(replace('./src/fonts/', '../fonts/'))
+    .pipe(autoprefixer({ grid: true, overrideBrowserslist: ["last 3 versions"], cascade: true }))
+    .pipe(sourcemaps.write('.'))
+    .pipe(gulp.dest(paths.stylesScss.dest))
+    .pipe(cleanCSS({ level: 2 }))
+    .pipe(rename({ basename: 'style', suffix: '.min' }))
+    .pipe(size({ showFiles: true }))
+    .pipe(gulp.dest(paths.stylesScss.dest))
+    .pipe(browsersync.stream())
 }
 
-// Обработка Java Script, Type Script и Coffee Script
+
+// JS (копируем + минифицируем)
 function scripts() {
   return gulp.src(paths.scripts.src)
-  .pipe(sourcemaps.init())
-  //.pipe(coffee({bare: true}))
-  /*
-  .pipe(ts({
-    noImplicitAny: true,
-    outFile: 'main.min.js'
-  }))
-  */
-  .pipe(babel({
-    presets: ['@babel/env']
-  }))
-  .pipe(uglify())
-  .pipe(concat('main.min.js'))
-  .pipe(sourcemaps.write('.'))
-  .pipe(size({
-    showFiles:true
-  }))
-  .pipe(gulp.dest(paths.scripts.dest))
-  .pipe(browsersync.stream())
+    .pipe(newer(paths.scripts.dest))
+    .pipe(gulp.dest(paths.scripts.dest))
+    .pipe(sourcemaps.init())
+    .pipe(babel({ presets: ['@babel/env'] }))
+    .pipe(uglify())
+    .pipe(concat('main.min.js'))
+    .pipe(sourcemaps.write('.'))
+    .pipe(size({ showFiles: true }))
+    .pipe(gulp.dest(paths.scripts.dest))
+    .pipe(browsersync.stream())
 }
 
+// Копирование картинок
+function imagesCopy() {
+  return gulp.src(paths.imagesOpt.src + '/**/*.{jpg,jpeg,png,svg,gif}')
+    .pipe(newer(paths.imagesOpt.dest))
+    .pipe(gulp.dest(paths.imagesOpt.dest))
+}
 
+// Копирование прочих файлов
+function copy() {
+  return gulp.src(paths.files.src)
+    .pipe(newer(paths.files.dest))
+    .pipe(gulp.dest(paths.files.dest))
+}
 
-
-
-// Отслеживание изменений в файлах и запуск лайв сервера
-function watch() {  
-  browsersync.init({
-    server: {
-        baseDir: basePath.dev
-    }
-  })
-  gulp.watch(paths.html.dest).on('change', browsersync.reload)
+// Watch + сервер
+function watch() {
+  browsersync.init({ server: { baseDir: basePath.dev } })
   gulp.watch(paths.files.watch, copy)
   gulp.watch(paths.html.watch, html)
   gulp.watch(paths.stylesScss.watch, stylesScss)
   gulp.watch(paths.scripts.src, scripts)
+  gulp.watch(paths.images.watch, imagesCopy)
 }
 
-// Таски для ручного запуска с помощью gulp clean, gulp html и т.д.
-exports.reset = reset
-exports.clean = clean
-exports.copy = copy
+// Экспорты
 exports.html = html
 exports.styles = stylesScss
 exports.scripts = scripts
+exports.imagesCopy = imagesCopy
+exports.copy = copy
 exports.watch = watch
 
 // Основные задачи
-const mainTasks = gulp.parallel(stylesScss, scripts);
+const mainTasks = gulp.parallel(stylesScss, scripts, imagesCopy, copy)
 
-// Построение сценариев выполнения задач
-const dev = gulp.series(clean, copy, html, mainTasks, watch);
-
-// Таск, который выполняется по команде gulp
-exports.default = dev;
+// Сценарии
+const dev = gulp.series(copy, html, mainTasks, watch)
+exports.default = dev

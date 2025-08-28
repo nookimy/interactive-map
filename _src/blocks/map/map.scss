@@ -1,5 +1,19 @@
-html, body {
-   margin: 0; padding: 0; overflow: hidden; touch-action: none;
+html {
+   box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+   box-sizing: inherit;
+}
+
+html,
+body {
+   margin: 0;
+   padding: 0;
+   overflow: hidden;
+   touch-action: none;
    height: 100%;
    font-family: Arial, sans-serif;
 }
@@ -8,7 +22,7 @@ html, body {
    width: 100vw;
    height: 100vh;
    background: #f0f0f0;
-   
+
    position: relative;
    user-select: none;
    -webkit-user-select: none;
@@ -17,20 +31,20 @@ html, body {
 }
 
 svg {
-    user-select: none;
-    display: block;
-    touch-action: none;
-    cursor: grab;
+   user-select: none;
+   display: block;
+   touch-action: none;
+   cursor: grab;
 }
 
 #inner {
-    transform-origin: 0 0;
-    transition: none;
+   transform-origin: 0 0;
+   transition: none;
 }
 
 
 /* Контейнер для кнопок */
-   #controls {
+#controls {
    position: absolute;
    top: 10px;
    right: 10px;
@@ -38,8 +52,9 @@ svg {
    display: flex;
    flex-direction: column;
    gap: 8px;
-   }
-   #controls button {
+}
+
+#controls button {
    background: white;
    border: 1px solid #888;
    border-radius: 4px;
@@ -50,40 +65,204 @@ svg {
    cursor: pointer;
    user-select: none;
    transition: background-color 0.2s;
-   }
-   #controls button:hover {
+}
+
+#controls button:hover {
    background-color: #eee;
-   }
-   #controls button:active {
+}
+
+#controls button:active {
    background-color: #ccc;
-   }
+}
 
 
 .balloon {
+   background: #FFF;
+   box-sizing: border-box;
    position: absolute;
    bottom: 0;
    left: 0;
-   background: #fff;
-   padding: 10px;
-   border-radius: 8px;
-   box-shadow: 0 0 15px rgba(0,0,0,0.3);
-   z-index: 10;
-   width: 100%;
-   max-width: 320px;
-   padding: 25px;
+   width: 100vw;
+   max-height: 100vh;
+   overflow-y: auto;
+   z-index: 100;
+   padding: 50px 25px 25px;
 
-    & h2,
-    & p {
-      margin: 0;
-      padding: 0;
-    }
+   @media (min-width: 768px) {
+      width: 320px;
+   }
+
+   &__wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 270px;
+
+      @media (min-width: 768px) {
+         max-width: unset;
+      }
+   }
+
+   &__content {
+      display: flex;
+      flex-direction: column;
+
+      & .line {
+         padding: 0 12px;
+         line-height: 1.2;
+         display: flex;
+         justify-content: space-between;
+         align-items: baseline;
+         font-size: 12px;
+      }
+   }
 
    &__close-button {
       position: absolute;
-      top: -20px;
-      right: -20px;
+      top: 0;
+      right: 0;
       width: 40px;
       height: 40px;
       cursor: pointer;
+      border: none;
+      background-color: transparent;
+   }
+
+   &__button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid #2D5E58;
+      border-radius: 10px;
+      text-decoration: none;
+
+      &--color {
+         background-color: #2D5E58;
+         color: #fff;
+      }
+   }
+}
+
+.location {
+   font-size: 16px;
+   color: #2B2A29;
+
+   & p {
+      margin: 0;
+      padding: 0;
+   }
+
+   &__title {
+      margin: 0;
+      display: flex;
+      gap: 15px;
+      font-size: 20px;
+      color: #2D5E58;
+      padding: 0;
+   }
+}
+
+.house {
+   position: relative;
+   line-height: 0;
+
+   & .line {
+      padding: 0;
+      line-height: 1.2;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 12px;
+   }
+
+   &__img {
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      object-position: center;
+      object-fit: cover;
+      border-radius: 10px;
+      line-height: 0;
+   }
+
+   &__description {
+      display: inline-block;
+      width: auto;
+      position: absolute;
+      top: 7px;
+      left: 7px;
+      right: 7px;
+      width: auto;
+      padding: 5px;
+      background-color: rgba(#fff, 0.7);
+      border-radius: 7px;
+      font-size: 12px;
+      line-height: 1.05;
+   }
+
+   & #house-area,
+   & #house-price {
+      font-weight: 700;
+      color: #2D5E58;
+   }
+}
+
+
+#location-number {
+   display: inline-flex;
+   justify-content: center;
+   width: 60px;
+   height: 46px;
+   background-color: #c0c0c0;
+   font-size: 14px;
+   color: #FFF;
+   padding: 0 5px;
+   border-radius: 5px;
+   align-items: center;
+}
+
+#location-status {
+   display: inline-flex;
+   width: 50%;
+   flex-grow: 1;
+}
+
+#location-area,
+#location-price,
+#total-price {
+   font-size: 16px;
+   font-weight: 700;
+   color: #2D5E58;
+
+   &::after {
+      content: ' ₽';
+   }
+}
+
+#location-area {
+   &::after {
+      content: ' м²';
+   }
+}
+
+#location-price {
+   &::after {
+      content: ' ₽';
+   }
+}
+
+#total-price {
+   &::before {
+      font-size: 12px;
+      color: #2B2A29;
+      font-weight: 400;
+      content: 'от ';
+   }
+
+   &::after {
+      content: ' ₽';
    }
 }
