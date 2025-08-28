@@ -85,13 +85,17 @@ $(function() {
     pointers.set(e.pointerId, e);
 
     if (pointers.size === 1) {
+      // Панорамирование одним пальцем
+      const p = e;
+      start = { x: p.clientX - translate.x, y: p.clientY - translate.y };
       isDragging = true;
-      start = { x: e.clientX - translate.x, y: e.clientY - translate.y };
       $svg.css('cursor', 'grabbing');
     } else if (pointers.size === 2) {
+      // Pinch zoom
       const pts = Array.from(pointers.values());
       lastTouchDist = getDistance(pts[0], pts[1]);
       lastTouchMid = getMidpoint(pts[0], pts[1]);
+      setTransition(false, 'touch'); // мгновенное масштабирование
     }
   });
 
@@ -100,7 +104,7 @@ $(function() {
     pointers.set(e.pointerId, e);
 
     if (pointers.size === 1 && isDragging) {
-      const p = e;
+      const p = Array.from(pointers.values())[0];
       translate = {
         x: p.clientX - start.x,
         y: p.clientY - start.y
@@ -136,12 +140,24 @@ $(function() {
 
   $svg.on('pointerup pointercancel', function(e) {
     pointers.delete(e.pointerId);
-    if (pointers.size < 2) {
+
+    if (pointers.size === 2) {
+      // продолжаем pinch-zoom без изменений
+      const pts = Array.from(pointers.values());
+      lastTouchDist = getDistance(pts[0], pts[1]);
+      lastTouchMid = getMidpoint(pts[0], pts[1]);
+    } else if (pointers.size === 1) {
+      // один палец остался → переходим на панорамирование
+      const p = Array.from(pointers.values())[0];
+      start = { x: p.clientX - translate.x, y: p.clientY - translate.y };
       lastTouchDist = null;
       lastTouchMid = null;
-    }
-    if (pointers.size === 0) {
+      isDragging = true;
+    } else {
+      // все пальцы убраны
       isDragging = false;
+      lastTouchDist = null;
+      lastTouchMid = null;
       $svg.css('cursor', 'grab');
     }
   });
